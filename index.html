@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meal Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1410;
+    --surface: #161d17;
+    --surface2: #1e281f;
+    --border: #2a3a2b;
+    --accent: #7dba6f;
+    --accent2: #a8d99c;
+    --accent-dim: #3d6b38;
+    --text: #e8f0e8;
+    --text-dim: #8a9e8b;
+    --text-muted: #4a5e4b;
+    --red: #e06060;
+    --amber: #d4a96a;
+    --card-bg: #192119;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  header {
+    padding: 48px 48px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .logo-area h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .logo-area h1 span {
+    color: var(--accent);
+  }
+
+  .logo-area p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    margin-top: 6px;
+    font-weight: 300;
+  }
+
+  .macro-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .pill {
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid;
+    letter-spacing: 0.02em;
+  }
+  .pill.protein { background: rgba(125,186,111,0.08); border-color: var(--accent-dim); color: var(--accent2); }
+  .pill.veg { background: rgba(168,217,156,0.06); border-color: #3a5a38; color: #8ab882; }
+  .pill.carb { background: rgba(212,169,106,0.08); border-color: #5a4020; color: var(--amber); }
+
+  main {
+    padding: 40px 48px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* PHASE SECTIONS */
+  .phase {
+    display: none;
+  }
+  .phase.active {
+    display: block;
+    animation: fadeUp 0.4s ease forwards;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* GENERATE PHASE */
+  .generate-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    text-align: center;
+    gap: 24px;
+  }
+
+  .generate-area h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  .generate-area h2 span {
+    color: var(--accent);
+  }
+
+  .generate-area p {
+    color: var(--text-dim);
+    max-width: 480px;
+    line-height: 1.65;
+    font-size: 0.95rem;
+  }
+
+  .prefs-grid {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 4px 0;
+  }
+
+  .pref-badge {
+    padding: 6px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pref-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .btn-primary {
+    padding: 14px 36px;
+    background: var(--accent);
+    color: #0f1410;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.01em;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent2);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(125,186,111,0.25);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* LOADING */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 60px 0;
+  }
+
+  .spinner-ring {
+    width: 48px; height: 48px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-state p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+
+  /* MEALS PHASE */
+  .phase-header {
+    margin-bottom: 32px;
+  }
+
+  .phase-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .phase-header p {
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    margin-top: 6px;
+  }
+
+  .meals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .meal-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .meal-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(125,186,111,0.04), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .meal-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-2px);
+  }
+
+  .meal-card:hover::before { opacity: 1; }
+
+  .meal-card.selected {
+    border-color: var(--accent);
+    background: rgba(125,186,111,0.06);
+  }
+
+  .meal-card.selected::before { opacity: 1; }
+
+  .meal-check {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 0.7rem;
+  }
+
+  .meal-card.selected .meal-check {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0f1410;
+  }
+
+  .meal-emoji {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .meal-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    padding-right: 28px;
+    line-height: 1.3;
+  }
+
+  .meal-desc {
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    line-height: 1.55;
+    margin-bottom: 14px;
+  }
+
+  .meal-macros {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .macro-tag {
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 500;
+    border: 1px solid;
+  }
+
+  .macro-tag.protein {
+    background: rgba(125,186,111,0.1);
+    border-color: var(--accent-dim);
+    color: var(--accent2);
+  }
+
+  .macro-tag.calories {
+    background: rgba(212,169,106,0.08);
+    border-color: #5a4020;
+    color: var(--amber);
+  }
+
+  .macro-tag.carbs {
+    background: rgba(100,120,200,0.08);
+    border-color: #303055;
+    color: #8899cc;
+  }
+
+  .select-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-top: 8px;
+  }
+
+  .select-count {
+    font-size: 0.88rem;
+    color: var(--text-dim);
+  }
+
+  .select-count strong {
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+  }
+
+  .btn-secondary {
+    padding: 10px 24px;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--text-dim);
+    background: var(--surface2);
+  }
+
+  /* GROCERY PHASE */
+  .grocery-container {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .grocery-list-area h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .category-section {
+    margin-bottom: 28px;
+  }
+
+  .category-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .grocery-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .grocery-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .grocery-item:hover {
+    border-color: var(--accent-dim);
+  }
+
+  .grocery-item.checked {
+    opacity: 0.45;
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+
+  .grocery-item.checked .item-checkbox {
+    background: var(--accent-dim);
+    border-color: var(--accent-dim);
+  }
+
+  .item-checkbox {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    transition: all 0.15s;
+  }
+
+  .item-name {
+    flex: 1;
+    font-size: 0.88rem;
+  }
+
+  .item-amount {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  /* Meal summary sidebar */
+  .meal-summary-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: sticky;
+    top: 20px;
+  }
+
+  .meal-summary-panel h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+  }
+
+  .approved-meal-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+
+  .approved-meal-item:last-child { border-bottom: none; }
+
+  .approved-meal-item .emoji { font-size: 1.1rem; }
+
+  .print-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .print-btn:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-bottom: 28px;
+    padding: 6px 0;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+  }
+
+  .back-btn:hover { color: var(--text); }
+
+  /* Error */
+  .error-box {
+    padding: 16px 20px;
+    background: rgba(224,96,96,0.08);
+    border: 1px solid rgba(224,96,96,0.25);
+    border-radius: 10px;
+    color: var(--red);
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    header { padding: 28px 24px 24px; }
+    main { padding: 28px 24px; }
+    .grocery-container { grid-template-columns: 1fr; }
+    .generate-area h2 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <h1>Plate<span>craft</span></h1>
+    <p>AI-powered weekly meal planning</p>
+  </div>
+  <div class="macro-pills">
+    <span class="pill protein">40–50g protein</span>
+    <span class="pill veg">veggie-forward</span>
+    <span class="pill carb">moderate carbs</span>
+  </div>
+</header>
+
+<main>
+  <!-- PHASE 1: Generate -->
+  <div class="phase active" id="phase-generate">
+    <div class="generate-area">
+      <h2>Your week, <span>planned.</span></h2>
+      <p>I'll find 10 high-protein meals built around your preferences — pick the ones you like, and I'll build your grocery list automatically.</p>
+      <div class="prefs-grid">
+        <div class="pref-badge"><span class="dot"></span> 40–50g protein per serving</div>
+        <div class="pref-badge"><span class="dot"></span> Vegetable-rich</div>
+        <div class="pref-badge"><span class="dot"></span> Moderate carbs, not keto</div>
+      </div>
+      <button class="btn-primary" id="generate-btn" onclick="generateMeals()">Generate My Meal Plan</button>
+      <div id="generate-error"></div>
+    </div>
+  </div>
+
+  <!-- PHASE 2: Select Meals -->
+  <div class="phase" id="phase-meals">
+    <div class="phase-header">
+      <h2>Choose your meals</h2>
+      <p>Select all the meals you want this week. I'll build your grocery list from your picks.</p>
+    </div>
+    <div class="meals-grid" id="meals-grid"></div>
+    <div class="select-bar">
+      <span class="select-count"><strong id="selected-count">0</strong> meals selected</span>
+      <button class="btn-primary" id="grocery-btn" onclick="buildGroceryList()" disabled>Build Grocery List →</button>
+    </div>
+  </div>
+
+  <!-- PHASE 3: Grocery List -->
+  <div class="phase" id="phase-grocery">
+    <button class="back-btn" onclick="goBack()">← Back to meals</button>
+    <div class="phase-header">
+      <h2>Your grocery list</h2>
+      <p>Everything you need for your selected meals. Tap items to check them off as you shop.</p>
+    </div>
+    <div id="grocery-loading" class="loading-state" style="display:none;">
+      <div class="spinner-ring"></div>
+      <p>Building your grocery list…</p>
+    </div>
+    <div class="grocery-container" id="grocery-container">
+      <div class="grocery-list-area" id="grocery-list-area">
+        <h3>🛒 Shopping List</h3>
+        <div id="grocery-categories"></div>
+      </div>
+      <div class="meal-summary-panel">
+        <h3>Your Approved Meals</h3>
+        <div id="approved-meals-list"></div>
+        <button class="print-btn" onclick="window.print()">🖨️ Print List</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  let allMeals = [];
+  let selectedMeals = new Set();
+  let groceryData = null;
+
+  function showPhase(id) {
+    document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  async function generateMeals() {
+    const btn = document.getElementById('generate-btn');
+    const errDiv = document.getElementById('generate-error');
+    errDiv.innerHTML = '';
+    btn.disabled = true;
+    btn.textContent = 'Finding meals…';
+
+    // Replace generate area with loader
+    document.querySelector('.generate-area').innerHTML = `
+      <div class="loading-state">
+        <div class="spinner-ring"></div>
+        <p>Finding your perfect 10 meals…</p>
+      </div>`;
+
+    const prompt = `You are a nutrition-focused meal planning assistant. Generate exactly 10 meal ideas for a week that meet these criteria:
+- 40–50 grams of protein per serving
+- Vegetable-rich
+- Moderate carbs (not low-carb/keto, but not pasta-heavy either)
+- Varied cuisines and cooking styles
+- Practical to prepare at home
+
+Respond ONLY with a valid JSON array (no markdown, no extra text) with this exact structure:
+[
+  {
+    "emoji": "🍗",
+    "name": "Meal Name",
+    "description": "2-sentence description of the meal and why it fits the criteria.",
+    "protein_g": 45,
+    "calories": 520,
+    "carbs_g": 32,
+    "ingredients": ["ingredient 1", "ingredient 2", "..."]
+  }
+]`;
+
+    try {
+      const response = await fetch("/.netlify/functions/claude-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.content.map(i => i.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      allMeals = JSON.parse(clean);
+
+      renderMeals();
+      showPhase('phase-meals');
+    } catch (err) {
+      document.querySelector('.generate-area').innerHTML = `
+        <h2>Your week, <span>planned.</span></h2>
+        <p>I'll find 10 high-protein meals built around your preferences.</p>
+        <div class="error-box">Something went wrong generating meals. Please try again.</div>
+        <button class="btn-primary" onclick="location.reload()">Try Again</button>`;
+    }
+  }
+
+  function renderMeals() {
+    const grid = document.getElementById('meals-grid');
+    grid.innerHTML = allMeals.map((meal, i) => `
+      <div class="meal-card ${selectedMeals.has(i) ? 'selected' : ''}" onclick="toggleMeal(${i})">
+        <div class="meal-check">${selectedMeals.has(i) ? '✓' : ''}</div>
+        <span class="meal-emoji">${meal.emoji}</span>
+        <div class="meal-name">${meal.name}</div>
+        <div class="meal-desc">${meal.description}</div>
+        <div class="meal-macros">
+          <span class="macro-tag protein">~${meal.protein_g}g protein</span>
+          <span class="macro-tag calories">${meal.calories} cal</span>
+          <span class="macro-tag carbs">${meal.carbs_g}g carbs</span>
+        </div>
+      </div>`).join('');
+    updateSelectBar();
+  }
+
+  function toggleMeal(i) {
+    if (selectedMeals.has(i)) selectedMeals.delete(i);
+    else selectedMeals.add(i);
+    renderMeals();
+  }
+
+  function updateSelectBar() {
+    const count = selectedMeals.size;
+    document.getElementById('selected-count').textContent = count;
+    const btn = document.getElementById('grocery-btn');
+    btn.disabled = count === 0;
+  }
+
+  async function buildGroceryList() {
+    showPhase('phase-grocery');
+    document.getElementById('grocery-container').style.display = 'none';
+    document.getElementById('grocery-loading').style.display = 'flex';
+
+    const chosen = Array.from(selectedMeals).map(i => allMeals[i]);
+
+    // Render sidebar
+    document.getElementById('approved-meals-list').innerHTML = chosen.map(m =>
+      `<div class="approved-meal-item"><span class="emoji">${m.emoji}</span><span>${m.name}</span></div>`
+    ).join('');
+
+    const mealsText = chosen.map(m => `- ${m.name}: ${m.ingredients.join(', ')}`).join('\n');
+
+    const prompt = `Given these selected meals and their ingredients, create a consolidated grocery list organized by category (Produce, Proteins, Dairy & Eggs, Pantry & Dry Goods, Frozen, Other).
+
+Meals:
+${mealsText}
+
+Consolidate duplicate ingredients (e.g. if multiple meals need garlic, list it once with a combined amount). Be practical with quantities.
+
+Respond ONLY with valid JSON (no markdown) in this exact format:
+{
+  "categories": [
+    {
+      "name": "Produce",
+      "items": [
+        { "name": "Broccoli", "amount": "2 heads" },
+        { "name": "Spinach", "amount": "2 bags (10 oz each)" }
+      ]
+    }
+  ]
+}`;
+
+    try {
+      const response = await fetch("/.netlify/functions/claude-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1500,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.content.map(i => i.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      groceryData = JSON.parse(clean);
+
+      renderGroceryList(groceryData);
+    } catch (err) {
+      document.getElementById('grocery-loading').style.display = 'none';
+      document.getElementById('grocery-list-area').innerHTML = `
+        <div class="error-box">Couldn't build the grocery list. Please go back and try again.</div>`;
+      document.getElementById('grocery-container').style.display = 'grid';
+    }
+  }
+
+  function renderGroceryList(data) {
+    const categoriesDiv = document.getElementById('grocery-categories');
+    categoriesDiv.innerHTML = data.categories.map((cat, ci) => `
+      <div class="category-section">
+        <div class="category-label">${cat.name}</div>
+        <div class="grocery-items" id="cat-${ci}">
+          ${cat.items.map((item, ii) => `
+            <div class="grocery-item" id="item-${ci}-${ii}" onclick="toggleItem(${ci},${ii})">
+              <div class="item-checkbox" id="cb-${ci}-${ii}"></div>
+              <span class="item-name">${item.name}</span>
+              <span class="item-amount">${item.amount}</span>
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+
+    document.getElementById('grocery-loading').style.display = 'none';
+    document.getElementById('grocery-container').style.display = 'grid';
+  }
+
+  function toggleItem(ci, ii) {
+    const item = document.getElementById(`item-${ci}-${ii}`);
+    const cb = document.getElementById(`cb-${ci}-${ii}`);
+    const checked = item.classList.toggle('checked');
+    cb.textContent = checked ? '✓' : '';
+  }
+
+  function goBack() {
+    showPhase('phase-meals');
+  }
+</script>
+</body>
+</html>
